@@ -1,0 +1,7 @@
+{
+  "name": "Universal Expense Tracker",
+  "description": "A modern personal expense and budget manager with recurring transaction scheduling, automatic date-triggered generation, and interactive financial analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
