@@ -51,6 +51,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
   dateFormat: 'DD/MM/YYYY',
   defaultTransactionType: 'expense',
   firstDayOfWeek: 'monday',
+  isPasswordEnabled: false,
+  passwordHash: '',
+  passwordHint: '',
+  autoLockMinutes: 5,
 };
 
 // Generates sample transactions across the current month for demo / testing

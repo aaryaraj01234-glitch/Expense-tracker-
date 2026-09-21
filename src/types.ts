@@ -68,6 +68,12 @@ export interface UserSettings {
   dateFormat: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   defaultTransactionType: TransactionType;
   firstDayOfWeek: 'monday' | 'sunday';
+  // Security / Password (PWD) settings
+  isPasswordEnabled?: boolean;
+  passwordHash?: string;
+  passwordHint?: string;
+  autoLockMinutes?: number; // 0 = immediate, 1, 5, 15, -1 = manual only
 }
 
 export type ActiveTab = 'overview' | 'transactions' | 'budgets' | 'categories' | 'reports' | 'settings';
+

@@ -13,12 +13,24 @@ import {
   CheckCircle2,
   AlertTriangle,
   RotateCcw,
+  Shield,
+  Lock,
+  KeyRound,
+  Smartphone,
+  DownloadCloud,
+  Check,
+  Globe,
+  Wifi,
 } from 'lucide-react';
 import { useExpense } from '../context/ExpenseContext';
 import { CURRENCIES } from '../data/defaults';
 import { exportTransactionsToCSV } from '../utils/formatters';
 import { ConfirmModal } from './Toast';
 import { AppLogo } from './Logo';
+import { PasswordSettingsModal } from './PasswordSettingsModal';
+import { ChromeInstallModal } from './ChromeInstallModal';
+import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 export const SettingsView: React.FC = () => {
   const {
@@ -30,11 +42,17 @@ export const SettingsView: React.FC = () => {
     loadSampleData,
     clearAllData,
     importCSVData,
+    lockApp,
   } = useExpense();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isChromeInstallModalOpen, setIsChromeInstallModalOpen] = useState(false);
+
+  const { isInstallable, isInstalled, install } = usePWAInstall();
+  const isOnline = useOnlineStatus();
 
   const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const code = e.target.value;
@@ -233,7 +251,139 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Section 2: Data Management */}
+      {/* Section 2: Security & Password Protection (PWD) */}
+      <div id="settings-security-card" className="bg-white dark:bg-neutral-900/90 border border-neutral-200/90 dark:border-neutral-800 rounded-xl p-5 shadow-2xs space-y-5">
+        <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-neutral-800 dark:text-neutral-200" />
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+              Security & Passcode Protection (PWD)
+            </h3>
+          </div>
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+              settings.isPasswordEnabled && settings.passwordHash
+                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+            }`}
+          >
+            {settings.isPasswordEnabled && settings.passwordHash ? 'Locked / Protected' : 'Not Configured'}
+          </span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+              Application Password & PIN Lock
+            </h4>
+            <p className="text-xs text-neutral-400 mt-0.5 max-w-lg">
+              {settings.isPasswordEnabled && settings.passwordHash
+                ? `Passcode protection is active. ${
+                    settings.passwordHint ? `Hint: "${settings.passwordHint}". ` : ''
+                  }Auto-lock timeout: ${
+                    settings.autoLockMinutes === 0
+                      ? 'Immediate on blur'
+                      : settings.autoLockMinutes === -1
+                      ? 'Manual lock only'
+                      : `${settings.autoLockMinutes ?? 5} min`
+                  }.`
+                : 'Set a 4-digit PIN or text password to keep personal budgets and transactions hidden from unauthorized users on this device.'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {settings.isPasswordEnabled && settings.passwordHash && (
+              <button
+                type="button"
+                onClick={lockApp}
+                className="px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-semibold rounded-xl transition-colors cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Lock Now</span>
+              </button>
+            )}
+            <button
+              id="settings-configure-password-btn"
+              type="button"
+              onClick={() => setIsPasswordModalOpen(true)}
+              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold rounded-xl transition-colors shadow-2xs cursor-pointer inline-flex items-center gap-2"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>{settings.isPasswordEnabled && settings.passwordHash ? 'Manage Passcode' : 'Set Passcode'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 3: Chrome & PWA App Installation */}
+      <div id="settings-pwa-install-card" className="bg-white dark:bg-neutral-900/90 border border-neutral-200/90 dark:border-neutral-800 rounded-xl p-5 shadow-2xs space-y-5">
+        <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-4 h-4 text-neutral-800 dark:text-neutral-200" />
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+              Google Chrome & Desktop Installation (PWA)
+            </h3>
+          </div>
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+              isInstalled
+                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
+            }`}
+          >
+            {isInstalled ? 'Installed' : 'Ready to Install'}
+          </span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+              Standalone Desktop & Mobile Experience
+            </h4>
+            <p className="text-xs text-neutral-400 mt-0.5 max-w-lg">
+              Install Universal Expense Tracker into Google Chrome, Edge, Android, or iOS to run as a native window without address bars, with lightning-fast offline startup and instant caching.
+            </p>
+            <div className="flex items-center gap-3 mt-2 text-[11px] text-neutral-500 dark:text-neutral-400">
+              <span className="inline-flex items-center gap-1">
+                <Wifi className="w-3 h-3 text-emerald-500" />
+                <span>{isOnline ? 'Online / Service Worker Active' : 'Offline Mode Active'}</span>
+              </span>
+              <span>•</span>
+              <span>Local Storage: Encrypted SHA-256</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              id="settings-chrome-guide-btn"
+              type="button"
+              onClick={() => setIsChromeInstallModalOpen(true)}
+              className="px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-semibold rounded-xl transition-colors cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Install Guide</span>
+            </button>
+
+            {isInstalled ? (
+              <span className="px-3.5 py-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-semibold rounded-xl inline-flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Installed</span>
+              </span>
+            ) : (
+              <button
+                id="settings-install-pwa-action-btn"
+                type="button"
+                onClick={install}
+                className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold rounded-xl transition-colors shadow-2xs cursor-pointer inline-flex items-center gap-2"
+              >
+                <DownloadCloud className="w-3.5 h-3.5" />
+                <span>{isInstallable ? 'Install in Chrome' : 'Install App'}</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Section 4: Data Management */}
       <div className="bg-white dark:bg-neutral-900/90 border border-neutral-200/90 dark:border-neutral-800 rounded-xl p-5 shadow-2xs space-y-5">
         <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 pb-2 border-b border-neutral-100 dark:border-neutral-800">
           Data Management
@@ -374,6 +524,18 @@ export const SettingsView: React.FC = () => {
           setIsClearModalOpen(false);
         }}
         onCancel={() => setIsClearModalOpen(false)}
+      />
+
+      {/* Password (PWD) Settings Modal */}
+      <PasswordSettingsModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
+
+      {/* Chrome PWA Install Guide Modal */}
+      <ChromeInstallModal
+        isOpen={isChromeInstallModalOpen}
+        onClose={() => setIsChromeInstallModalOpen(false)}
       />
     </div>
   );

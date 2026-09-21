@@ -22,6 +22,7 @@ import {
   forceGenerateSingleOccurrence,
   generateSampleRecurringSchedules,
 } from '../utils/recurringScheduler';
+import { hashPassword, verifyPassword } from '../utils/security';
 
 interface ToastState {
   id: number;
@@ -42,6 +43,15 @@ interface ExpenseContextType {
   setSearchTerm: (term: string) => void;
   toast: ToastState | null;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
+
+  // Security & Password (PWD) lock system
+  isAppLocked: boolean;
+  lockApp: () => void;
+  unlockApp: (passwordOrPin: string) => Promise<boolean>;
+  enablePassword: (password: string, hint?: string, autoLockMinutes?: number) => Promise<void>;
+  disablePassword: () => void;
+  changePassword: (oldPass: string, newPass: string, hint?: string) => Promise<boolean>;
+  resetPasswordEmergency: () => void;
 
   // Add / Edit Modal state
   isAddModalOpen: boolean;
@@ -168,6 +178,20 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     description?: string;
   } | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+
+  // 6. Security / Password (PWD) Lock State
+  const [isAppLocked, setIsAppLocked] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.isPasswordEnabled && parsed.passwordHash) {
+          return true; // Lock on initial load if password protection is configured
+        }
+      }
+    } catch (_) {}
+    return false;
+  });
 
   // Sync to localStorage
   useEffect(() => {
@@ -714,6 +738,135 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [categories, showToast]);
 
+  const lockApp = useCallback(() => {
+    if (settings.isPasswordEnabled && settings.passwordHash) {
+      setIsAppLocked(true);
+    }
+  }, [settings.isPasswordEnabled, settings.passwordHash]);
+
+  const unlockApp = useCallback(
+    async (passwordOrPin: string): Promise<boolean> => {
+      if (!settings.isPasswordEnabled || !settings.passwordHash) {
+        setIsAppLocked(false);
+        return true;
+      }
+      const isValid = await verifyPassword(passwordOrPin, settings.passwordHash);
+      if (isValid) {
+        setIsAppLocked(false);
+        showToast('App unlocked', 'success');
+        return true;
+      }
+      return false;
+    },
+    [settings.isPasswordEnabled, settings.passwordHash, showToast]
+  );
+
+  const enablePassword = useCallback(
+    async (password: string, hint: string = '', autoLockMinutes: number = 5): Promise<void> => {
+      const hash = await hashPassword(password);
+      setSettings((prev) => ({
+        ...prev,
+        isPasswordEnabled: true,
+        passwordHash: hash,
+        passwordHint: hint,
+        autoLockMinutes,
+      }));
+      showToast('Password lock activated', 'success');
+    },
+    [showToast]
+  );
+
+  const disablePassword = useCallback(() => {
+    setSettings((prev) => ({
+      ...prev,
+      isPasswordEnabled: false,
+      passwordHash: '',
+      passwordHint: '',
+    }));
+    setIsAppLocked(false);
+    showToast('Password lock removed', 'info');
+  }, [showToast]);
+
+  const changePassword = useCallback(
+    async (oldPass: string, newPass: string, hint?: string): Promise<boolean> => {
+      if (settings.passwordHash) {
+        const isOldValid = await verifyPassword(oldPass, settings.passwordHash);
+        if (!isOldValid) {
+          showToast('Current password incorrect', 'error');
+          return false;
+        }
+      }
+      const newHash = await hashPassword(newPass);
+      setSettings((prev) => ({
+        ...prev,
+        isPasswordEnabled: true,
+        passwordHash: newHash,
+        passwordHint: hint !== undefined ? hint : prev.passwordHint,
+      }));
+      showToast('Password updated successfully', 'success');
+      return true;
+    },
+    [settings.passwordHash, showToast]
+  );
+
+  const resetPasswordEmergency = useCallback(() => {
+    setSettings((prev) => ({
+      ...prev,
+      isPasswordEnabled: false,
+      passwordHash: '',
+      passwordHint: '',
+    }));
+    setIsAppLocked(false);
+    showToast('Password lock reset', 'info');
+  }, [showToast]);
+
+  // Auto-lock timer effect based on autoLockMinutes and visibility
+  useEffect(() => {
+    if (!settings.isPasswordEnabled || !settings.passwordHash) return;
+
+    let timeoutId: any = null;
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      const minutes = settings.autoLockMinutes ?? 5;
+      if (minutes > 0 && !isAppLocked) {
+        timeoutId = setTimeout(() => {
+          setIsAppLocked(true);
+        }, minutes * 60 * 1000);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        const minutes = settings.autoLockMinutes ?? 5;
+        if (minutes === 0) {
+          setIsAppLocked(true);
+        }
+      } else {
+        resetTimer();
+      }
+    };
+
+    const handleUserActivity = () => {
+      if (!isAppLocked) {
+        resetTimer();
+      }
+    };
+
+    resetTimer();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('mousemove', handleUserActivity, { passive: true });
+    window.addEventListener('keydown', handleUserActivity, { passive: true });
+    window.addEventListener('touchstart', handleUserActivity, { passive: true });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('touchstart', handleUserActivity);
+    };
+  }, [settings.isPasswordEnabled, settings.passwordHash, settings.autoLockMinutes, isAppLocked]);
+
   const value = useMemo(
     () => ({
       transactions,
@@ -728,6 +881,13 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setSearchTerm,
       toast,
       showToast,
+      isAppLocked,
+      lockApp,
+      unlockApp,
+      enablePassword,
+      disablePassword,
+      changePassword,
+      resetPasswordEmergency,
       isAddModalOpen,
       editingTransaction,
       modalInitialData,
@@ -765,6 +925,13 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       searchTerm,
       toast,
       showToast,
+      isAppLocked,
+      lockApp,
+      unlockApp,
+      enablePassword,
+      disablePassword,
+      changePassword,
+      resetPasswordEmergency,
       isAddModalOpen,
       editingTransaction,
       modalInitialData,

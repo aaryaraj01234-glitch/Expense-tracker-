@@ -14,11 +14,13 @@ import {
   ChevronLeft,
   Sun,
   Moon,
+  Lock,
 } from 'lucide-react';
 import { useExpense } from '../context/ExpenseContext';
 import { ActiveTab } from '../types';
 import { getMonthDisplay, getCurrentMonthKey } from '../utils/formatters';
 import { AppLogo } from './Logo';
+import { PWAInstallButton } from './PWAInstallButton';
 
 export const Navigation: React.FC = () => {
   const {
@@ -31,6 +33,7 @@ export const Navigation: React.FC = () => {
     settings,
     isDarkMode,
     toggleTheme,
+    lockApp,
   } = useExpense();
 
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -82,16 +85,31 @@ export const Navigation: React.FC = () => {
             </div>
           </div>
 
-          <button
-            id="desktop-theme-toggle-header"
-            type="button"
-            onClick={toggleTheme}
-            className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700/80 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
-            title={isDarkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
-            aria-label={isDarkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
-          >
-            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-neutral-600" />}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {Boolean(settings.isPasswordEnabled && settings.passwordHash) && (
+              <button
+                id="desktop-quick-lock-btn"
+                type="button"
+                onClick={lockApp}
+                className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700/80 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
+                title="Lock App Now (Passcode Protection)"
+                aria-label="Lock App Now"
+              >
+                <Lock className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+              </button>
+            )}
+
+            <button
+              id="desktop-theme-toggle-header"
+              type="button"
+              onClick={toggleTheme}
+              className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700/80 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
+              title={isDarkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
+              aria-label={isDarkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
+            >
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-neutral-600" />}
+            </button>
+          </div>
         </div>
 
         {/* Action Button: Add Transaction */}
@@ -174,7 +192,9 @@ export const Navigation: React.FC = () => {
         </nav>
 
         {/* Footer / Status & Theme Toggle */}
-        <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
+        <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2.5">
+          <PWAInstallButton variant="header" className="w-full justify-center py-2" />
+
           <button
             id="desktop-theme-toggle-footer"
             type="button"
@@ -215,7 +235,22 @@ export const Navigation: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {Boolean(settings.isPasswordEnabled && settings.passwordHash) && (
+            <button
+              id="mobile-quick-lock-btn"
+              type="button"
+              onClick={lockApp}
+              className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+              title="Lock App (Passcode Protection)"
+              aria-label="Lock App"
+            >
+              <Lock className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          <PWAInstallButton variant="compact" />
+
           {/* Quick Mobile Light/Dark Mode Toggle */}
           <button
             id="mobile-theme-toggle"

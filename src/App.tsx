@@ -9,6 +9,8 @@ import { ReportsView } from './components/ReportsView';
 import { SettingsView } from './components/SettingsView';
 import { AddTransactionModal } from './components/AddTransactionModal';
 import { Toast } from './components/Toast';
+import { LockScreen } from './components/LockScreen';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 const MainLayout: React.FC = () => {
   const { activeTab, openAddModal, isAddModalOpen } = useExpense();
@@ -50,6 +52,12 @@ const MainLayout: React.FC = () => {
 
       {/* Subtle floating notifications */}
       <Toast />
+
+      {/* Offline Status Banner */}
+      <OfflineIndicator />
+
+      {/* Passcode / Password Lock Screen */}
+      <LockScreen />
     </div>
   );
 };
